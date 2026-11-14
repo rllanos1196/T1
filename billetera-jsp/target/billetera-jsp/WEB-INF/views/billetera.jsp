@@ -135,7 +135,7 @@
                             <input type="text" class="form-control" id="monto" name="monto"
                                    placeholder="0.00" inputmode="decimal" required>
                         </div>
-                        <div class="col-md-6 d-grid">
+                        <div class="col-md-12 d-grid">
                             <button type="submit" class="btn btn-primary">Registrar movimiento</button>
                         </div>
                     </div>
