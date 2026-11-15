@@ -34,4 +34,18 @@ describe('NuevoMovimientoComponent', () => {
     expect(component.saldoInsuficiente).toBe(true);
     expect(component.formularioValido).toBe(false);
   });
+
+  it('should reject non-numeric formats like Infinity, NaN, 1e3 or 0x10', () => {
+    for (const texto of ['Infinity', 'NaN', '1e3', '0x10', '10.555', 'abc']) {
+      component.montoTexto = texto;
+      expect(component.formularioValido, texto).toBe(false);
+    }
+  });
+
+  it('should accept 100, 100.5 and 100,50', () => {
+    for (const texto of ['100', '100.5', '100,50']) {
+      component.montoTexto = texto;
+      expect(component.formularioValido, texto).toBe(true);
+    }
+  });
 });

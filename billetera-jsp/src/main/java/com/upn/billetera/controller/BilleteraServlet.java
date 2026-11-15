@@ -9,25 +9,40 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Controlador MVC (Model 2) de la Billetera Digital.
  * GET  -> muestra saldo e historial (forward a la vista JSP)
- * POST -> valida y procesa un nuevo movimiento
+ * POST -> valida y procesa un nuevo movimiento.
+ *         Si es inválido: forward a la misma vista con el error (sin modificar datos).
+ *         Si es válido: Post-Redirect-Get (sendRedirect) para evitar reenvíos al actualizar.
  */
 @WebServlet("/billetera")
 public class BilleteraServlet extends HttpServlet {
 
     private static final String VISTA = "/WEB-INF/views/billetera.jsp";
-    private static final double SALDO_INICIAL = 250.0;
+    private static final BigDecimal SALDO_INICIAL = new BigDecimal("250.00");
+
+    /** Solo dígitos, signo opcional y hasta 2 decimales (rechaza NaN, Infinity, 1e3, 100d, 0x10...). */
+    private static final Pattern FORMATO_MONTO = Pattern.compile("-?\\d+([.,]\\d{1,2})?");
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         inicializarSesion(session);
+
+        // Mensaje "flash" dejado por el POST antes del redirect: se muestra una sola vez
+        Object exito = session.getAttribute("exito");
+        if (exito != null) {
+            request.setAttribute("exito", exito);
+            session.removeAttribute("exito");
+        }
+
         request.getRequestDispatcher(VISTA).forward(request, response);
     }
 
@@ -41,58 +56,57 @@ public class BilleteraServlet extends HttpServlet {
         String tipo = request.getParameter("tipo");
         String montoTexto = request.getParameter("monto");
 
-        Double saldo = (Double) session.getAttribute("saldo");
+        BigDecimal saldo = (BigDecimal) session.getAttribute("saldo");
         @SuppressWarnings("unchecked")
         List<Movimiento> historial = (List<Movimiento>) session.getAttribute("historial");
 
         // --- Validaciones (no alteran la sesión si fallan) ---
         if (tipo == null || (!"Recarga".equals(tipo) && !"Gasto".equals(tipo))) {
-            request.setAttribute("error", "Debe seleccionar un tipo de movimiento válido (Recarga o Gasto).");
-            request.getRequestDispatcher(VISTA).forward(request, response);
+            mostrarError(request, response, "Debe seleccionar un tipo de movimiento válido (Recarga o Gasto).");
             return;
         }
 
         if (montoTexto == null || montoTexto.trim().isEmpty()) {
-            request.setAttribute("error", "El monto no puede quedar vacío.");
-            request.getRequestDispatcher(VISTA).forward(request, response);
+            mostrarError(request, response, "El monto no puede quedar vacío.");
             return;
         }
 
-        double monto;
-        try {
-            monto = Double.parseDouble(montoTexto.trim().replace(",", "."));
-        } catch (NumberFormatException e) {
-            request.setAttribute("error", "El monto debe ser un valor numérico válido.");
-            request.getRequestDispatcher(VISTA).forward(request, response);
+        String texto = montoTexto.trim();
+        if (!FORMATO_MONTO.matcher(texto).matches()) {
+            mostrarError(request, response,
+                    "El monto debe ser un valor numérico válido (ejemplo: 100 o 100.50, máximo 2 decimales).");
+            return;
+        }
+        BigDecimal monto = new BigDecimal(texto.replace(",", "."));
+
+        if (monto.signum() <= 0) {
+            mostrarError(request, response, "El monto debe ser un número mayor a cero.");
             return;
         }
 
-        if (monto <= 0) {
-            request.setAttribute("error", "El monto debe ser un número mayor a cero.");
-            request.getRequestDispatcher(VISTA).forward(request, response);
-            return;
-        }
-
-        if ("Gasto".equals(tipo) && monto > saldo) {
-            request.setAttribute("error", "Saldo insuficiente para realizar el gasto. Saldo disponible: S/ "
-                    + String.format("%.2f", saldo) + ".");
-            request.getRequestDispatcher(VISTA).forward(request, response);
+        if ("Gasto".equals(tipo) && monto.compareTo(saldo) > 0) {
+            mostrarError(request, response, "Saldo insuficiente para realizar el gasto. Saldo disponible: S/ "
+                    + saldo.setScale(2) + ".");
             return;
         }
 
         // --- Operación válida: actualiza saldo e historial ---
-        if ("Recarga".equals(tipo)) {
-            saldo = saldo + monto;
-        } else {
-            saldo = saldo - monto;
-        }
+        saldo = "Recarga".equals(tipo) ? saldo.add(monto) : saldo.subtract(monto);
         session.setAttribute("saldo", saldo);
 
         // Orden cronológico inverso: el movimiento más reciente siempre arriba
         historial.add(0, new Movimiento(tipo, monto));
         session.setAttribute("historial", historial);
 
-        request.setAttribute("exito", "Movimiento registrado correctamente.");
+        // Post-Redirect-Get: al actualizar la página no se reenvía el formulario
+        session.setAttribute("exito", "Movimiento registrado correctamente.");
+        response.sendRedirect(request.getContextPath() + "/billetera");
+    }
+
+    /** Presenta el error en la misma vista sin modificar saldo ni historial. */
+    private void mostrarError(HttpServletRequest request, HttpServletResponse response, String mensaje)
+            throws ServletException, IOException {
+        request.setAttribute("error", mensaje);
         request.getRequestDispatcher(VISTA).forward(request, response);
     }
 
@@ -100,7 +114,7 @@ public class BilleteraServlet extends HttpServlet {
      * Estado inicial obligatorio: saldo exactamente S/ 250.00 e historial vacío.
      */
     private void inicializarSesion(HttpSession session) {
-        if (session.getAttribute("saldo") == null) {
+        if (!(session.getAttribute("saldo") instanceof BigDecimal)) {
             session.setAttribute("saldo", SALDO_INICIAL);
         }
         if (session.getAttribute("historial") == null) {
