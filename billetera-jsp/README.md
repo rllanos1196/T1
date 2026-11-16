@@ -8,8 +8,8 @@ Aplicación web desarrollada bajo el patrón **MVC (Model 2)** para Apache Tomca
 
 | Componente | Versión |
 |---|---|
-| JDK | OpenJDK 23.0.2 (compila con `maven.compiler.release=17`, requisito JDK 17+) |
-| Maven | 3.10.0 |
+| JDK | Eclipse Temurin 17.0.21 (compila con `maven.compiler.release=17`, requisito JDK 17+) |
+| Maven | 3.9.9 |
 | Apache Tomcat | 10.1.61 (Servlet 6.0 / Jakarta EE 10) |
 | Jakarta Servlet API | 6.0.0 (scope `provided`) |
 | JSTL | `jakarta.servlet.jsp.jstl-api` 3.0.0 + `org.glassfish.web:jakarta.servlet.jsp.jstl` 3.0.1 |
@@ -66,6 +66,18 @@ Genera el artefacto obligatorio de entrega: `target/billetera-jsp.war`.
 
    `index.jsp` redirige automáticamente a ese mismo recurso.
 
+### Windows PowerShell
+
+`catalina.bat` necesita `JAVA_HOME` y `CATALINA_HOME` cuando se ejecuta desde otra carpeta
+(ajustar las rutas a la instalación local):
+
+```powershell
+$env:JAVA_HOME = "C:\ruta\jdk-17"; $env:CATALINA_HOME = "C:\ruta\apache-tomcat-10.1.61"
+mvn clean package
+Copy-Item target\billetera-jsp.war "$env:CATALINA_HOME\webapps\" -Force
+& "$env:CATALINA_HOME\bin\catalina.bat" run
+```
+
 ## Reglas de negocio implementadas
 
 - Saldo inicial exacto **S/ 250.00** con historial vacío al iniciar la sesión.
@@ -76,6 +88,11 @@ Genera el artefacto obligatorio de entrega: `target/billetera-jsp.war`.
 - Validaciones (vacío, no numérico, `<= 0`, gasto mayor al saldo): se rechazan
   **sin alterar** saldo ni historial, mostrando un mensaje comprensible
   (alerta `alert-danger` de Bootstrap en la misma vista).
+- El monto debe tener formato numérico simple (`100`, `100.50`, máx. 2 decimales):
+  se rechazan textos como `NaN`, `Infinity`, `1e3`, `100d` o `0x10`.
+- Saldo y montos se manejan con `BigDecimal` para evitar errores de redondeo.
+- **Post-Redirect-Get**: tras un POST válido se hace `sendRedirect()` (mensaje de éxito
+  "flash" en sesión), así actualizar la página no repite el movimiento.
 - La vista usa **JSTL** (`jakarta.tags.core`, `jakarta.tags.fmt`) con
   Expression Language; **cero scriptlets** `<% ... %>` con código Java.
 
@@ -88,3 +105,4 @@ Genera el artefacto obligatorio de entrega: `target/billetera-jsp.war`.
 | 3 | Gasto de S/ 50.00 | Saldo S/ 300.00; gasto aparece antes que recarga | ✅ |
 | 4 | Gasto de S/ 400.00 | Se rechaza con "Saldo insuficiente"; saldo sigue en S/ 300.00 | ✅ |
 | 5 | Monto 0, -10, texto o vacío | Se rechaza; no cambia saldo ni historial | ✅ |
+| 6 | Monto `NaN` / `Infinity` / `0x10` | Se rechaza como no numérico | ✅ |

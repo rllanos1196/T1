@@ -20,11 +20,18 @@ export class BilleteraComponent {
   movimientos: Movimiento[] = [];
 
   registrarMovimiento(movimiento: Movimiento): void {
-    if (movimiento.tipo === 'Recarga') {
-      this.saldo += movimiento.monto;
-    } else {
-      this.saldo -= movimiento.monto;
+    // Defensa en el padre: nunca aplica un movimiento inválido aunque el hijo lo emita
+    const { tipo, monto } = movimiento;
+    if (!Number.isFinite(monto) || monto <= 0) {
+      return;
     }
+    if (tipo === 'Gasto' && monto > this.saldo) {
+      return;
+    }
+
+    const nuevoSaldo = tipo === 'Recarga' ? this.saldo + monto : this.saldo - monto;
+    // Redondeo a céntimos para evitar errores de coma flotante (0.1 + 0.2)
+    this.saldo = Math.round(nuevoSaldo * 100) / 100;
     // Orden cronológico inverso: el movimiento más reciente siempre arriba
     this.movimientos.unshift(movimiento);
   }

@@ -43,6 +43,16 @@ ng serve        # o: npx ng serve --port 4200
 
 Abrir http://localhost:4200
 
+En Windows PowerShell (si `npm`/`npx` están bloqueados por la política de scripts,
+usar `npm.cmd`/`npx.cmd`). Si la página queda en blanco porque el servidor solo
+escucha en IPv6 (`[::1]`), forzar la dirección IPv4 y otro puerto:
+
+```powershell
+cd billetera-angular; npm.cmd install; npx.cmd ng serve --port 4300 --host 127.0.0.1
+```
+
+Abrir http://127.0.0.1:4300
+
 ## Compilar para producción
 
 ```bash
@@ -69,6 +79,10 @@ npx ng build
   muestra `Saldo insuficiente para realizar el gasto` con `@if`. El botón se deshabilita
   con `[disabled]` cuando el formulario no es válido y el campo monto se limpia tras
   emitir un registro válido. **El hijo nunca modifica saldo ni historial.**
+- El monto acepta solo formato numérico simple (`100`, `100.50`, máx. 2 decimales):
+  se rechazan `Infinity`, `NaN`, `1e3`, `0x10`, etc.
+- Como defensa adicional, el padre vuelve a validar el movimiento recibido y
+  redondea el saldo a céntimos para evitar errores de coma flotante.
 
 ## Pruebas funcionales ejecutadas
 
@@ -79,3 +93,6 @@ npx ng build
 | 3 | Gasto de S/ 50.00 | Saldo S/ 300.00; gasto aparece antes que recarga | ✅ |
 | 4 | Gasto de S/ 400.00 | Error "Saldo insuficiente…", botón deshabilitado, saldo sigue en S/ 300.00 | ✅ |
 | 5 | Monto 0, -10, texto o vacío | Botón deshabilitado / error; no cambia saldo ni historial | ✅ |
+| 6 | Monto `Infinity` / `0x10` / `1e3` | Botón deshabilitado / error | ✅ |
+
+Pruebas unitarias: `npx ng test --watch=false`

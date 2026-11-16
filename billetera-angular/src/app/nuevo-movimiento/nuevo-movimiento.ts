@@ -21,13 +21,16 @@ export class NuevoMovimientoComponent {
   tipo: 'Recarga' | 'Gasto' = 'Recarga';
   montoTexto = '';
 
+  /** Solo dígitos, signo opcional y hasta 2 decimales (rechaza Infinity, 1e3, 0x10...). */
+  private static readonly FORMATO_MONTO = /^-?\d+([.,]\d{1,2})?$/;
+
   private parseMonto(): number | null {
-    const texto = this.montoTexto.trim().replace(',', '.');
-    if (texto === '') {
+    const texto = this.montoTexto.trim();
+    if (!NuevoMovimientoComponent.FORMATO_MONTO.test(texto)) {
       return null;
     }
-    const monto = Number(texto);
-    return Number.isNaN(monto) ? null : monto;
+    const monto = Number(texto.replace(',', '.'));
+    return Number.isFinite(monto) ? monto : null;
   }
 
   /** Monto numérico y mayor a cero */

@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -25,12 +26,12 @@
         <!-- Mensajes de validación -->
         <c:if test="${not empty error}">
             <div class="alert alert-danger" role="alert">
-                <strong>Error:</strong> ${error}
+                <strong>Error:</strong> <c:out value="${error}"/>
             </div>
         </c:if>
         <c:if test="${not empty exito}">
             <div class="alert alert-success" role="alert">
-                <strong>OK:</strong> ${exito}
+                <strong>OK:</strong> <c:out value="${exito}"/>
             </div>
         </c:if>
 
@@ -52,8 +53,6 @@
                     </div>
                 </div>
             </div>
-
-           
         </div>
 
         <div class="row g-3 mt-1">
@@ -116,39 +115,36 @@
                 </div>
             </div>
 
-
             <!-- Formulario de nuevo movimiento -->
-        <div class="card border-0 shadow-sm mt-3">
-            <div class="card-header bg-white fw-semibold">Nuevo movimiento</div>
-            <div class="card-body">
-                <form method="POST" action="${pageContext.request.contextPath}/billetera">
-                    <div class="row g-3 align-items-end">
-                        <div class="row-md-6">
-                            <label class="form-label small" for="tipo">Tipo</label>
-                            <select class="form-select" id="tipo" name="tipo" required>
-                                <option value="Recarga">Recarga</option>
-                                <option value="Gasto">Gasto</option>
-                            </select>
-                        </div>
-                        <div class="row-md-6">
-                            <label class="form-label small" for="monto">Monto (S/)</label>
-                            <input type="text" class="form-control" id="monto" name="monto"
-                                   placeholder="0.00" inputmode="decimal" required>
-                        </div>
-                        <div class="col-md-12 d-grid">
-                            <button type="submit" class="btn btn-primary">Registrar movimiento</button>
-                        </div>
+            <div class="col-lg-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white fw-semibold">Nuevo movimiento</div>
+                    <div class="card-body">
+                        <form method="POST" action="${pageContext.request.contextPath}/billetera">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label small" for="tipo">Tipo</label>
+                                    <select class="form-select" id="tipo" name="tipo" required>
+                                        <option value="Recarga">Recarga</option>
+                                        <%-- Tras un error se conserva el tipo elegido --%>
+                                        <option value="Gasto" ${not empty error and param.tipo == 'Gasto' ? 'selected' : ''}>Gasto</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small" for="monto">Monto (S/)</label>
+                                    <input type="text" class="form-control ${not empty error ? 'is-invalid' : ''}"
+                                           id="monto" name="monto" placeholder="0.00" inputmode="decimal" required
+                                           value="${not empty error ? fn:escapeXml(param.monto) : ''}">
+                                </div>
+                                <div class="col-md-4 d-grid">
+                                    <button type="submit" class="btn btn-primary">Registrar movimiento</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
-            
-
-
-            
-        </div>
-
-        
 
     </main>
 

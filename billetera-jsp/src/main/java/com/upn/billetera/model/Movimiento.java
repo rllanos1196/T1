@@ -1,19 +1,25 @@
 package com.upn.billetera.model;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+
 /**
  * POJO que representa un movimiento de la billetera.
  * tipo: 'Recarga' o 'Gasto'
- * monto: monto del movimiento (> 0)
+ * monto: monto del movimiento (> 0). Se usa BigDecimal para evitar
+ * errores de redondeo propios de double con montos de dinero.
  */
-public class Movimiento {
+public class Movimiento implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private String tipo;
-    private double monto;
+    private BigDecimal monto;
 
     public Movimiento() {
     }
 
-    public Movimiento(String tipo, double monto) {
+    public Movimiento(String tipo, BigDecimal monto) {
         this.tipo = tipo;
         this.monto = monto;
     }
@@ -26,11 +32,11 @@ public class Movimiento {
         this.tipo = tipo;
     }
 
-    public double getMonto() {
+    public BigDecimal getMonto() {
         return monto;
     }
 
-    public void setMonto(double monto) {
+    public void setMonto(BigDecimal monto) {
         this.monto = monto;
     }
 }
